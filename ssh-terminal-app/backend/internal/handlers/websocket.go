@@ -23,13 +23,6 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-type SSHSession struct {
-	Client    *ssh.Client
-	Session   *ssh.Session
-	StdinPipe interface{ Write([]byte) (int, error) }
-	mu        sync.Mutex
-}
-
 func createSSHClient(conn *models.SSHConnection) (*ssh.Client, error) {
 	var authMethods []ssh.AuthMethod
 
@@ -69,7 +62,6 @@ func createSSHClient(conn *models.SSHConnection) (*ssh.Client, error) {
 }
 
 func HandleWebSocketTerminal(c *gin.Context) {
-
 	connID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid connection ID"})
@@ -135,9 +127,9 @@ func HandleWebSocketTerminal(c *gin.Context) {
 	defer session.Close()
 
 	modes := ssh.TerminalModes{
-		ssh.ECHO:          1,     // Enable echoing
-		ssh.TTY_OP_ISPEED: 14400, // Input speed
-		ssh.TTY_OP_OSPEED: 14400, // Output speed
+		ssh.ECHO:          1,
+		ssh.TTY_OP_ISPEED: 14400,
+		ssh.TTY_OP_OSPEED: 14400,
 	}
 
 	if err := session.RequestPty("xterm-256color", 24, 80, modes); err != nil {
@@ -194,7 +186,14 @@ func HandleWebSocketTerminal(c *gin.Context) {
 	})
 
 	done := make(chan struct{})
+	var closeOnce sync.Once
+	closeDone := func() {
+		closeOnce.Do(func() {
+			close(done)
+		})
+	}
 
+	// Stdout okuma
 	go func() {
 		buf := make([]byte, 1024)
 		for {
@@ -205,7 +204,7 @@ func HandleWebSocketTerminal(c *gin.Context) {
 				n, err := stdout.Read(buf)
 				if err != nil {
 					log.Printf("Stdout read error: %v", err)
-					close(done)
+					closeDone()
 					return
 				}
 				if n > 0 {
@@ -218,6 +217,7 @@ func HandleWebSocketTerminal(c *gin.Context) {
 		}
 	}()
 
+	// Stderr okuma
 	go func() {
 		buf := make([]byte, 1024)
 		for {
@@ -239,6 +239,7 @@ func HandleWebSocketTerminal(c *gin.Context) {
 		}
 	}()
 
+	// WebSocket mesajları
 	for {
 		select {
 		case <-done:
@@ -260,7 +261,7 @@ func HandleWebSocketTerminal(c *gin.Context) {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					log.Printf("WebSocket error: %v", err)
 				}
-				close(done)
+				closeDone()
 				return
 			}
 
@@ -269,7 +270,7 @@ func HandleWebSocketTerminal(c *gin.Context) {
 				_, err := stdin.Write([]byte(msg.Data))
 				if err != nil {
 					log.Printf("Stdin write error: %v", err)
-					close(done)
+					closeDone()
 					return
 				}
 			case "resize":
@@ -279,16 +280,4 @@ func HandleWebSocketTerminal(c *gin.Context) {
 			}
 		}
 	}
-}
-
-func HandleWebSocketTerminalAuth(c *gin.Context) {
-	token := c.Query("token")
-	if token == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Token required"})
-		return
-	}
-
-	c.Request.Header.Set("Authorization", "Bearer "+token)
-
-	HandleWebSocketTerminal(c)
 }

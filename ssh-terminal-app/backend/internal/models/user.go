@@ -77,8 +77,8 @@ func CreateGoogleUser(email, name, googleID string) (*User, error) {
 	}
 
 	result, err := database.DB.Exec(
-		`INSERT INTO users (email, name, google_id, auth_provider) VALUES (?, ?, ?, ?)`,
-		email, name, googleID, "google",
+		`INSERT INTO users (email, password_hash, name, google_id, auth_provider) VALUES (?, ?, ?, ?, ?)`,
+		email, "", name, googleID, "google",
 	)
 	if err != nil {
 		return nil, err
@@ -94,17 +94,31 @@ func CreateGoogleUser(email, name, googleID string) (*User, error) {
 
 func GetUserByID(id int64) (*User, error) {
 	user := &User{}
+	var passwordHash sql.NullString
+	var name sql.NullString
+	var googleID sql.NullString
+
 	err := database.DB.QueryRow(
 		`SELECT id, email, password_hash, name, google_id, auth_provider, created_at, updated_at 
 		FROM users WHERE id = ?`,
 		id,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.GoogleID, &user.AuthProvider, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Email, &passwordHash, &name, &googleID, &user.AuthProvider, &user.CreatedAt, &user.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	if passwordHash.Valid {
+		user.PasswordHash = passwordHash.String
+	}
+	if name.Valid {
+		user.Name = name.String
+	}
+	if googleID.Valid {
+		user.GoogleID = &googleID.String
 	}
 
 	return user, nil
@@ -112,17 +126,31 @@ func GetUserByID(id int64) (*User, error) {
 
 func GetUserByEmail(email string) (*User, error) {
 	user := &User{}
+	var passwordHash sql.NullString
+	var name sql.NullString
+	var googleID sql.NullString
+
 	err := database.DB.QueryRow(
 		`SELECT id, email, password_hash, name, google_id, auth_provider, created_at, updated_at 
 		FROM users WHERE email = ?`,
 		email,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.GoogleID, &user.AuthProvider, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Email, &passwordHash, &name, &googleID, &user.AuthProvider, &user.CreatedAt, &user.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	if passwordHash.Valid {
+		user.PasswordHash = passwordHash.String
+	}
+	if name.Valid {
+		user.Name = name.String
+	}
+	if googleID.Valid {
+		user.GoogleID = &googleID.String
 	}
 
 	return user, nil
@@ -130,17 +158,31 @@ func GetUserByEmail(email string) (*User, error) {
 
 func GetUserByGoogleID(googleID string) (*User, error) {
 	user := &User{}
+	var passwordHash sql.NullString
+	var name sql.NullString
+	var gID sql.NullString
+
 	err := database.DB.QueryRow(
 		`SELECT id, email, password_hash, name, google_id, auth_provider, created_at, updated_at 
 		FROM users WHERE google_id = ?`,
 		googleID,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Name, &user.GoogleID, &user.AuthProvider, &user.CreatedAt, &user.UpdatedAt)
+	).Scan(&user.ID, &user.Email, &passwordHash, &name, &gID, &user.AuthProvider, &user.CreatedAt, &user.UpdatedAt)
 
 	if err == sql.ErrNoRows {
 		return nil, errors.New("user not found")
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	if passwordHash.Valid {
+		user.PasswordHash = passwordHash.String
+	}
+	if name.Valid {
+		user.Name = name.String
+	}
+	if gID.Valid {
+		user.GoogleID = &gID.String
 	}
 
 	return user, nil

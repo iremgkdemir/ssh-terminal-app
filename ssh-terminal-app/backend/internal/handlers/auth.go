@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"os"
 	"ssh-terminal-app/internal/middleware"
@@ -122,6 +123,7 @@ func GoogleCallback(c *gin.Context) {
 
 	token, err := googleOAuthConfig.Exchange(context.Background(), code)
 	if err != nil {
+		log.Printf("Token exchange error: %v", err)
 		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=exchange_failed")
 		return
 	}
@@ -129,6 +131,7 @@ func GoogleCallback(c *gin.Context) {
 	client := googleOAuthConfig.Client(context.Background(), token)
 	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 	if err != nil {
+		log.Printf("Userinfo error: %v", err)
 		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=userinfo_failed")
 		return
 	}
@@ -136,18 +139,23 @@ func GoogleCallback(c *gin.Context) {
 
 	var googleUser GoogleUserInfo
 	if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
+		log.Printf("Decode error: %v", err)
 		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=decode_failed")
 		return
 	}
 
+	log.Printf("Google user: %+v", googleUser)
+
 	user, err := models.CreateGoogleUser(googleUser.Email, googleUser.Name, googleUser.ID)
 	if err != nil {
+		log.Printf("CreateGoogleUser error: %v", err)
 		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=create_user_failed")
 		return
 	}
 
 	jwtToken, err := middleware.GenerateToken(user)
 	if err != nil {
+		log.Printf("Token generation error: %v", err)
 		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=token_failed")
 		return
 	}

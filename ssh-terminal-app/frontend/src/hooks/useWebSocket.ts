@@ -29,13 +29,13 @@ export const useWebSocketTerminal = ({
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback(() => {
     if (!user || wsRef.current?.readyState === WebSocket.OPEN) return;
 
     setIsConnecting(true);
-    
+
     const wsUrl = getWebSocketURL(connectionId, user.id);
     const ws = new WebSocket(wsUrl);
 
@@ -48,7 +48,7 @@ export const useWebSocketTerminal = ({
     ws.onmessage = (event) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
-        
+
         switch (message.type) {
           case 'output':
             if (message.data) {

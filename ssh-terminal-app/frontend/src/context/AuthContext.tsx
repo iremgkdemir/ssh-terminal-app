@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { ReactNode } from "react";
 import { authAPI } from '../lib/api';
 
 interface User {
@@ -28,53 +29,74 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing auth on mount
     const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      
-      // Verify token is still valid
-      authAPI.getMe()
-        .then(response => {
-          setUser(response.data.user);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-        })
-        .catch(() => {
-          // Token invalid, clear auth
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setToken(null);
-          setUser(null);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    } else {
-      setIsLoading(false);
+    const storedUserRaw = localStorage.getItem('user');
+    if (storedToken) setToken(storedToken);
+    if (storedUserRaw && storedUserRaw !== 'undefined' && storedUserRaw !== 'null') {
+      try {
+        const parsed = JSON.parse(storedUserRaw) as User;
+        setUser(parsed);
+      } catch {
+        localStorage.removeItem('user');
+        setUser(null);
+      }
     }
+
+    if (!storedToken) {
+      setIsLoading(false);
+      return;
+    }
+    authAPI.getMe()
+      .then(response => {
+        const userData = (response.data as any)?.user ?? response.data;
+
+        if (userData) {
+          setUser(userData);
+          localStorage.setItem('user', JSON.stringify(userData));
+        } else {
+          localStorage.removeItem('user');
+          setUser(null);
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
+
 
   const login = async (email: string, password: string) => {
     const response = await authAPI.login({ email, password });
     const { user: userData, token: authToken } = response.data;
-    
-    setUser(userData);
-    setToken(authToken);
-    localStorage.setItem('token', authToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+
+    setUser(userData ?? null);
+    setToken(authToken ?? null);
+
+    if (authToken) localStorage.setItem('token', authToken);
+    else localStorage.removeItem('token');
+
+    if (userData) localStorage.setItem('user', JSON.stringify(userData));
+    else localStorage.removeItem('user'); 
   };
 
   const register = async (email: string, password: string, name: string) => {
     const response = await authAPI.register({ email, password, name });
     const { user: userData, token: authToken } = response.data;
-    
-    setUser(userData);
-    setToken(authToken);
-    localStorage.setItem('token', authToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+
+    setUser(userData ?? null);
+    setToken(authToken ?? null);
+
+    if (authToken) localStorage.setItem('token', authToken);
+    else localStorage.removeItem('token');
+
+    if (userData) localStorage.setItem('user', JSON.stringify(userData));
+    else localStorage.removeItem('user');
+
   };
 
   const logout = async () => {
@@ -83,7 +105,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       // Ignore logout errors
     }
-    
+
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
@@ -91,10 +113,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const setAuthData = (userData: User, authToken: string) => {
-    setUser(userData);
-    setToken(authToken);
-    localStorage.setItem('token', authToken);
-    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData ?? null);
+    setToken(authToken ?? null);
+
+    if (authToken) localStorage.setItem('token', authToken);
+    else localStorage.removeItem('token');
+
+    if (userData) localStorage.setItem('user', JSON.stringify(userData));
+    else localStorage.removeItem('user');
+
   };
 
   return (
