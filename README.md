@@ -50,9 +50,12 @@ docker compose up --build
 cd backend
 go run ./cmd/main.go
 ```
+
 ### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+http://localhost:5173/
