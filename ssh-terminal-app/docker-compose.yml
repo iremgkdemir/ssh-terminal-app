@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      GIN_MODE: "release"
+      DATABASE_PATH: "/data/ssh_terminal.db"
+      FRONTEND_URL: "http://localhost:5173"
+      ENCRYPTION_KEY: ""
+      GJWT_SECRET: "${JWT_SECRET}"
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      GOOGLE_REDIRECT_URL: "${GOOGLE_REDIRECT_URL}"
+    volumes:
+      - dbdata:/data
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  dbdata:
