@@ -9,7 +9,7 @@ services:
       GIN_MODE: "release"
       DATABASE_PATH: "/data/ssh_terminal.db"
       FRONTEND_URL: "http://localhost:5173"
-      ENCRYPTION_KEY: ""
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}"
       GJWT_SECRET: "${JWT_SECRET}"
       GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
       GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"

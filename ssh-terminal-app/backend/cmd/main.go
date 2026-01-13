@@ -17,15 +17,13 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("No .env file found, using environment variables")
 	}
-
+	if err := crypto.InitEncryption(); err != nil {
+		log.Fatalf("Failed to initialize encryption: %v", err)
+	}
 	if err := database.InitDB(); err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer database.CloseDB()
-
-	if err := crypto.InitEncryption(); err != nil {
-		log.Fatalf("Failed to initialize encryption: %v", err)
-	}
 
 	middleware.InitJWT()
 
@@ -44,7 +42,7 @@ func main() {
 	}
 
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{frontendURL, "http://localhost:5173", "http://localhost:3000"},
+		AllowOrigins:     []string{frontendURL, "http://localhost:5173", "http://localhost:8080"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -87,7 +85,7 @@ func main() {
 	}
 
 	log.Printf("Server starting on port %s", port)
-	log.Printf("rontend URL: %s", frontendURL)
+	log.Printf("Frontend URL: %s", frontendURL)
 	log.Printf("Google OAuth configured: %v", os.Getenv("GOOGLE_CLIENT_ID") != "")
 
 	if err := r.Run(":" + port); err != nil {

@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authAPI } from '../lib/api';
-import { Terminal, Mail, Lock, User, Chrome } from 'lucide-react';
+import { Terminal, Mail, Lock, User, Chrome, Eye, EyeOff } from 'lucide-react';
+
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -11,7 +12,10 @@ const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+  const strongPasswordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -24,8 +28,8 @@ const Register: React.FC = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Şifre en az 6 karakter olmalıdır');
+    if (!strongPasswordRegex.test(password)) {
+      setError('Şifre en az 8 karakter olmalı, en az 1 harf + 1 rakam + 1 özel karakter içermelidir.');
       return;
     }
 
@@ -107,14 +111,26 @@ const Register: React.FC = () => {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3 bg-dark-900 border border-dark-600 rounded-lg focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-colors"
+                  className="w-full pl-12 pr-12 py-3 bg-dark-900 border border-dark-600 rounded-lg focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-colors"
                   required
-                  minLength={6}
+                  minLength={8}
+                  pattern="^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$"
+                  title="En az 8 karakter, 1 harf, 1 rakam, 1 özel karakter"
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-300"
+                  aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+
               </div>
             </div>
 
@@ -125,13 +141,23 @@ const Register: React.FC = () => {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3 bg-dark-900 border border-dark-600 rounded-lg focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-colors"
+                  className="w-full pl-12 pr-12 py-3 bg-dark-900 border border-dark-600 rounded-lg focus:border-accent-cyan focus:ring-1 focus:ring-accent-cyan transition-colors"
                   required
                 />
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-gray-500 hover:text-gray-300"
+                  aria-label={showConfirmPassword ? "Şifreyi gizle" : "Şifreyi göster"}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+
               </div>
             </div>
 

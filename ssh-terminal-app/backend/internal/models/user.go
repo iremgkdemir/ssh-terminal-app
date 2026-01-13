@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"regexp"
 	"ssh-terminal-app/internal/database"
 	"time"
 
@@ -22,7 +23,7 @@ type User struct {
 
 type RegisterInput struct {
 	Email    string `json:"email" binding:"required,email"`
-	Password string `json:"password" binding:"required,min=6"`
+	Password string `json:"password" binding:"required,min=8"`
 	Name     string `json:"name" binding:"required"`
 }
 
@@ -31,10 +32,28 @@ type LoginInput struct {
 	Password string `json:"password" binding:"required"`
 }
 
+func validateStrongPassword(pw string) error {
+	if len(pw) < 8 {
+		return errors.New("Şifre en az 8 karakter olmalıdır")
+	}
+	hasLetter := regexp.MustCompile(`[A-Za-z]`).MatchString
+	hasDigit := regexp.MustCompile(`[0-9]`).MatchString
+	hasSpecial := regexp.MustCompile(`[^A-Za-z0-9]`).MatchString
+
+	if !hasLetter(pw) || !hasDigit(pw) || !hasSpecial(pw) {
+		return errors.New("Şifre en az 1 harf, 1 rakam ve 1 özel karakter içermelidir")
+	}
+	return nil
+}
+
 func CreateUser(input RegisterInput) (*User, error) {
+	if err := validateStrongPassword(input.Password); err != nil {
+		return nil, err
+	}
+
 	existingUser, _ := GetUserByEmail(input.Email)
 	if existingUser != nil {
-		return nil, errors.New("user with this email already exists")
+		return nil, errors.New("Bu email ile kayıtlı bir kullanıcı zaten mevcut")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
@@ -137,7 +156,7 @@ func GetUserByEmail(email string) (*User, error) {
 	).Scan(&user.ID, &user.Email, &passwordHash, &name, &googleID, &user.AuthProvider, &user.CreatedAt, &user.UpdatedAt)
 
 	if err == sql.ErrNoRows {
-		return nil, errors.New("user not found")
+		return nil, errors.New("Bu email ile kayıtlı bir kullanıcı bulunamadı")
 	}
 	if err != nil {
 		return nil, err
